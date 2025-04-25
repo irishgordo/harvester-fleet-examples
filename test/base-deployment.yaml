@@ -169,7 +169,7 @@ spec:
   ipFamilyPolicy: SingleStack
   ports:
     - name: ngx9lb
-      nodePort: 30001
+      nodePort: 30011
       port: 8080
       protocol: TCP
       targetPort: 80
@@ -197,7 +197,7 @@ spec:
   ipFamilyPolicy: SingleStack
   ports:
     - name: ngx11lb
-      nodePort: 30002
+      nodePort: 30012
       port: 8080
       protocol: TCP
       targetPort: 80
