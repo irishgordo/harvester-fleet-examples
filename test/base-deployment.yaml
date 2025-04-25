@@ -1,0 +1,207 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    field.cattle.io/description: nginx-1-9g-vol
+    volume.beta.kubernetes.io/storage-provisioner: driver.harvesterhci.io
+    volume.kubernetes.io/storage-provisioner: driver.harvesterhci.io
+  labels:
+    svc: ngx9
+  name: nginx-1-9g
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: harvester
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    field.cattle.io/description: nginx-11-11g-vol
+    volume.beta.kubernetes.io/storage-provisioner: driver.harvesterhci.io
+    volume.kubernetes.io/storage-provisioner: driver.harvesterhci.io
+  labels:
+    svc: ngx11
+  name: nginx-11-11g
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: harvester
+  volumeMode: Filesystem
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    field.cattle.io/description: nginx 1 deployment
+  labels:
+    workload.user.cattle.io/workloadselector: apps.deployment-default-ngx9
+  name: ngx9
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      workload.user.cattle.io/workloadselector: apps.deployment-default-ngx9
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        svc: ngx9
+        workload.user.cattle.io/workloadselector: apps.deployment-default-ngx9
+      namespace: default
+    spec:
+      affinity: {}
+      containers:
+        - image: nginx:latest
+          imagePullPolicy: IfNotPresent
+          name: ngx9
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+          stdin: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          tty: true
+          volumeMounts:
+            - mountPath: /mnt/ngx9-1g-vol
+              name: vol-ngx9-1g
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: vol-ngx9-1g
+          persistentVolumeClaim:
+            claimName: nginx-1-9g
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    field.cattle.io/description: nginx 2 deployment
+  labels:
+    workload.user.cattle.io/workloadselector: apps.deployment-default-ngx11
+  name: ngx11
+  namespace: default
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      workload.user.cattle.io/workloadselector: apps.deployment-default-ngx11
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        svc: ngx11
+        workload.user.cattle.io/workloadselector: apps.deployment-default-ngx11
+      namespace: default
+    spec:
+      affinity: {}
+      containers:
+        - image: nginx:latest
+          imagePullPolicy: IfNotPresent
+          name: ngx11
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+          stdin: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          tty: true
+          volumeMounts:
+            - mountPath: /mnt/ngx11-2g-vol
+              name: vol-ngx11-2g
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: vol-ngx11-2g
+          persistentVolumeClaim:
+            claimName: nginx-11-11g
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cloudprovider.harvesterhci.io/ipam: dhcp
+    field.cattle.io/description: ipam lb ngx9
+  finalizers:
+    - service.kubernetes.io/load-balancer-cleanup
+  name: lb-ngx9-ipam
+  namespace: default
+spec:
+  allocateLoadBalancerNodePorts: true
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - name: ngx9lb
+      nodePort: 30001
+      port: 8080
+      protocol: TCP
+      targetPort: 80
+  selector:
+    svc: ngx9
+  sessionAffinity: None
+  type: LoadBalancer
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cloudprovider.harvesterhci.io/ipam: dhcp
+    field.cattle.io/description: ipam lb ngx11
+  finalizers:
+    - service.kubernetes.io/load-balancer-cleanup
+  name: lb-ngx11-ipam
+  namespace: default
+spec:
+  allocateLoadBalancerNodePorts: true
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - name: ngx11lb
+      nodePort: 30002
+      port: 8080
+      protocol: TCP
+      targetPort: 80
+  selector:
+    svc: ngx11
+  sessionAffinity: None
+  type: LoadBalancer
